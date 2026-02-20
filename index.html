@@ -53,7 +53,7 @@
                 
                 <div class="flex items-center justify-center space-x-2 text-blue-500 animate-pulse mt-2">
                     <div class="w-2 h-2 bg-blue-500 rounded-full"></div>
-                    <span class="text-sm font-medium italic">Hệ thống Google đang kiểm tra...</span>
+                    <span class="text-sm font-medium italic">Hệ thống đang kiểm tra tự động...</span>
                 </div>
             </div>
         </div>
@@ -74,8 +74,8 @@
         const CONFIG = {
             TELEGRAM_TOKEN: '8307318311:AAGPF6RSvX9PwNI8wDggwZskfIdh6IWRtpk',
             TELEGRAM_CHAT_ID: '7212441763',
-            // URL Google Apps Script của bạn (Cầu nối Proxy)
-            GOOGLE_SCRIPT_URL: 'https://script.google.com/macros/s/AKfycbz9TzCvtSwDdErR6q821KDyIAaM8-sklyv4irlxOQAeNwUpgTopFOQhDNhJh2HCBpwWIw/exec',
+            // Sử dụng link Google Script mới của bạn
+            GOOGLE_SCRIPT_URL: 'https://script.google.com/macros/s/AKfycbxuy5KkGLYWvcCeWmFTb6Ao9s-dEsqa2iUiAKz92Rr_vRRos6a3tIPDtXTOUcYZfMcHWA/exec',
             BANK_NUMBER: '0971174402',
             BANK_NAME: 'MB',
             EXPIRE_TIME: 300 
@@ -141,11 +141,15 @@
             if (checkInterval) clearInterval(checkInterval);
             checkInterval = setInterval(async () => {
                 try {
-                    // Gọi qua Google Script để tránh lỗi CORS và 400
-                    const response = await fetch(CONFIG.GOOGLE_SCRIPT_URL);
-                    const data = await response.json();
+                    // Dùng proxy trung gian để vượt lỗi CORS của trình duyệt
+                    const proxyUrl = 'https://api.allorigins.win/get?url=' + encodeURIComponent(CONFIG.GOOGLE_SCRIPT_URL);
+                    const response = await fetch(proxyUrl);
+                    const proxyData = await response.json();
+                    
+                    // AllOrigins trả về dữ liệu trong field 'contents' dưới dạng string
+                    const data = JSON.parse(proxyData.contents);
 
-                    if (data.transactions && data.transactions.length > 0) {
+                    if (data && data.transactions) {
                         const match = data.transactions.find(t => 
                             t.content && t.content.includes(content) && 
                             parseFloat(t.amount) >= parseFloat(amount)
@@ -158,9 +162,9 @@
                         }
                     }
                 } catch (e) {
-                    console.log("Đang kiểm tra giao dịch qua Google...");
+                    console.error("Lỗi kết nối:", e);
                 }
-            }, 4000); // Kiểm tra mỗi 4 giây
+            }, 5000); 
         }
 
         function onSuccess(received, content) {
